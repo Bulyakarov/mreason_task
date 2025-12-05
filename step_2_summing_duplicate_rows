@@ -1,0 +1,46 @@
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+# Пути к файлам
+input_file_path = 'X:\\tests\\start_data.xlsx'
+output_file_path = 'X:\\tests\\step2.xlsx'  # Новый файл
+
+# Чтение данных
+df = pd.read_excel(input_file_path, sheet_name='def_data')
+
+# Преобразование даты в строку для группировки
+if 'Месяц продаж' in df.columns and pd.api.types.is_datetime64_any_dtype(df['Месяц продаж']):
+   
+    df['Месяц продаж'] = df['Месяц продаж'].dt.strftime('%d.%m.%Y')
+
+# Замена пустых строк на NaN и заполнение пропущенных значений
+df = df.replace('', np.nan)
+df = df.fillna(0)
+
+# Идентификация числовых столбцов для суммирования
+numeric_columns = []
+for col in df.columns:
+    if col not in ['Месяц продаж', 'Год  коллекции', 'Магазин', 'Коллекция']:
+        try:
+            df[col] = pd.to_numeric(df[col])
+            numeric_columns.append(col)
+        except:
+            pass
+
+# Группировка данных
+grouped_df = df.groupby(['Месяц продаж', 'Год  коллекции', 'Магазин', 'Коллекция'])[numeric_columns].sum().reset_index()
+
+# Запись результатов в НОВЫЙ файл
+with pd.ExcelWriter(output_file_path, engine='openpyxl') as writer:
+    grouped_df.to_excel(writer, sheet_name='def_data', index=False)
+    # Если нужно сохранить и другие вкладки из исходного файла
+    # for sheet_name in pd.ExcelFile(input_file_path).sheet_names:
+    #     if sheet_name != 'def_data':
+    #         pd.read_excel(input_file_path, sheet_name=sheet_name).to_excel(writer, sheet_name=sheet_name, index=False)
+
+print(f"Обработка завершена.")
+print(f"Исходный файл: {input_file_path}")
+print(f"Результат сохранен в: {output_file_path}")
+print(f"Было строк: {len(df)}")
+print(f"Стало строк: {len(grouped_df)}")
